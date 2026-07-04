@@ -10,9 +10,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
 /**
- * Modelo de bodega
+ * Modelo para el manejo de los sensores de monitoreo.
  */
-class Bodega extends Model
+class Sensor extends Model
 {
     // Trait para el manejo de la tabla
     use HasFactory, SoftDeletes;
@@ -28,6 +28,7 @@ class Bodega extends Model
         'name',
         'description',
         'status',
+        'warehouse_id',
         'created_by',
         'updated_by',
     ];
@@ -35,22 +36,23 @@ class Bodega extends Model
     // Definir el tipo de dato
     protected $casts = [
         'status' => 'boolean',
+        'warehouse_id' => 'string',
     ];
 
     // Valores por defecto del modelo antes de guardar en base de datos
     protected $attributes = [
         'status' => true,
     ];
-    
+
     // Relaciones
-    public function lots(): HasMany
+    public function warehouse(): BelongsTo
     {
-        return $this->hasMany(Lot::class);
+        return $this->belongsTo(Bodega::class, 'warehouse_id');
     }
 
-    public function sensors(): HasMany
+    public function readings(): HasMany
     {
-        return $this->hasMany(Sensor::class, 'warehouse_id');
+        return $this->hasMany(Reading::class);
     }
 
     public function createdBy(): BelongsTo
@@ -61,27 +63,25 @@ class Bodega extends Model
     public function updatedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
-    }
+    }    
 
-    // Definir qué pasa con la bodega al crear o actualizar
+    // Definir qué pasa con el sensor al crear o actualizar
     protected static function booted(): void
     {
-        // Al crear una bodega, generar UUID y obtener el usuario autenticado
-        static::creating(function (Bodega $bodega): void
-        {
-            if (empty($bodega->{$bodega->getKeyName()})) {
-                $bodega->{$bodega->getKeyName()} = (string) Str::uuid();
+        // Al crear un sensor, generar UUID y obtener el usuario autenticado
+        static::creating(function (Sensor $model): void {
+            if (empty($model->{$model->getKeyName()})) {
+                $model->{$model->getKeyName()} = (string) Str::uuid();
             }
             if (auth()->check()) {
-                $bodega->created_by = auth()->id();
+                $model->created_by = auth()->id();
             }
         });
 
         // Obtener el usuario autenticado y actualizar el campo updated_by
-        static::updating(function (Bodega $bodega): void
-        {
+        static::updating(function (Sensor $model): void {
             if (auth()->check()) {
-                $bodega->updated_by = auth()->id();
+                $model->updated_by = auth()->id();
             }
         });
     }
